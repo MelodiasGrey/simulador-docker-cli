@@ -6,6 +6,7 @@ Simulador interactivo de terminal para Docker, desarrollado en Python.
 
 - [Jorge Romero]
 - [Deepseek, Gemini, Copilot, OpenCode, ClaudeCode, Delcy Rodriguez, Corpoelec, Maria corina Machado, Simon Bolivar, Las bolas del dragon, El buen Buey]
+- [Hola]
 
 ## Instrucciones de Ejecución
 
