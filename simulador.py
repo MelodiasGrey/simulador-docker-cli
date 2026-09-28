@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """
 Simulador básico de Docker en consola.
-Comandos soportados: pull, images, run, ps, stop, rm, logs, help, exit/quit
+Comandos soportados: pull, images, run, ps [-a], stop, rm, logs, help, exit/quit
 """
 
 import random
@@ -55,10 +55,7 @@ def resolver_contenedor(ref):
 
 
 def generar_logs_simulados(nombre, imagen):
-    """
-    Genera una lista de líneas de log ficticias pero realistas,
-    con timestamps consecutivos.
-    """
+    """Genera líneas de log ficticias con timestamps consecutivos."""
     base = datetime.now() - timedelta(seconds=random.randint(10, 300))
     eventos = [
         f"Starting {imagen}...",
@@ -74,6 +71,13 @@ def generar_logs_simulados(nombre, imagen):
         ts = base + timedelta(seconds=i * random.uniform(0.3, 1.5))
         lineas.append(f"{ts.strftime('%Y-%m-%dT%H:%M:%S.%f')[:-3]}Z {ev}")
     return lineas
+
+
+def imprimir_tabla_ps(items):
+    """Imprime la tabla de contenedores con formato alineado."""
+    print(f"{'CONTAINER ID':<14}{'NAME':<20}{'IMAGE':<25}{'STATUS':<10}")
+    for cid, info in items:
+        print(f"{cid:<14}{info['nombre']:<20}{info['imagen']:<25}{info['estado']:<10}")
 
 
 # ---------------------------------------------------------------------------
@@ -176,24 +180,37 @@ def cmd_run(args):
     print(cid, flush=True)   # ← flush explícito
 
 
-def cmd_ps(_args=None):
-    """Simula 'docker ps'."""
-    print(f"{'CONTAINER ID':<14}{'NAME':<22}{'IMAGE':<22}{'STATUS':<8}{'PORTS':<15}{'VOLUMES'}")
-    for cid, info in contenedores.items():
-        puertos = info.get('puertos') or '-'
-        volumenes = info.get('volumenes') or '-'
-        print(f"{cid:<14}{info['nombre']:<22}{info['imagen']:<22}{info['estado']:<8}{puertos:<15}{volumenes}")
+def cmd_ps(args):
+    """
+    Simula 'docker ps'.
+      - Sin flags        -> solo contenedores activos ('Up').
+      - Con '-a' / '--all' -> todos los contenedores, incluidos los 'Exited'.
+    """
+    mostrar_todos = False
+    for arg in args:
+        if arg in ('-a', '--all'):
+            mostrar_todos = True
+        else:
+            print(f"Error: opción desconocida para 'ps': {arg}")
+            print("Uso: ps [-a|--all]")
+            return
+
+    if mostrar_todos:
+        items = list(contenedores.items())
+    else:
+        items = [(cid, info) for cid, info in contenedores.items()
+                 if info['estado'] == 'Up']
+
+    imprimir_tabla_ps(items)
+
 
 def cmd_stop(args):
-    """
-    Simula 'docker stop <id|nombre>'.
-    Cambia el estado de 'Up' a 'Exited'.
-    """
+    """Simula 'docker stop <id|nombre>'. Cambia el estado de 'Up' a 'Exited'."""
     if len(args) != 1:
         print("Uso: stop <id|nombre>")
         return
 
-    cid, info = resolver_contenedor(args[0])
+    _cid, info = resolver_contenedor(args[0])
     if info is None:
         print(f"Error: no such container: {args[0]}")
         return
@@ -211,10 +228,7 @@ def cmd_stop(args):
 
 
 def cmd_rm(args):
-    """
-    Simula 'docker rm <id|nombre>'.
-    Solo permite eliminar contenedores en estado 'Exited'.
-    """
+    """Simula 'docker rm <id|nombre>'. Solo elimina contenedores 'Exited'."""
     if len(args) != 1:
         print("Uso: rm <id|nombre>")
         return
@@ -236,10 +250,7 @@ def cmd_rm(args):
 
 
 def cmd_logs(args):
-    """
-    Simula 'docker logs <id|nombre>'.
-    Muestra los mensajes de log almacenados para el contenedor.
-    """
+    """Simula 'docker logs <id|nombre>'."""
     if len(args) != 1:
         print("Uso: logs <id|nombre>")
         return
@@ -259,7 +270,7 @@ def cmd_help(_args=None):
     print("  pull <imagen[:tag]>        Descarga una imagen al registro local")
     print("  images                     Lista las imágenes descargadas")
     print("  run <nombre> <imagen>      Crea y arranca un contenedor")
-    print("  ps                         Lista los contenedores")
+    print("  ps [-a|--all]              Lista contenedores activos (-a: todos)")
     print("  stop <id|nombre>           Detiene un contenedor (Up -> Exited)")
     print("  rm <id|nombre>             Elimina un contenedor detenido")
     print("  logs <id|nombre>           Muestra los logs de un contenedor")
